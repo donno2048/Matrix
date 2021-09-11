@@ -1,15 +1,17 @@
 # Matrix
 
+![video](./wakeup.gif)
+
 ## Compile
 
 ```bash
-gcc main.c -o matrix -lncurses
+gcc matrix.c -o matrix -lncurses
 ```
 
 ### Optimize
 
 ```bash
-gcc main.c -o matrix -lncurses -Ofast
+gcc matrix.c -o matrix -lncurses -Ofast
 ```
 
 ## Use

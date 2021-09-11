@@ -1,8 +1,11 @@
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
+#include <unistd.h>
 #include <curses.h>
+#include <pwd.h>
 typedef struct cmatrix {
     int val;
     bool is_head;
@@ -10,17 +13,41 @@ typedef struct cmatrix {
 cmatrix **matrix = (cmatrix **) NULL;
 volatile sig_atomic_t signal_status = 0;
 void sighandler(int s) {signal_status = s;}
+void wprint(const char *string, unsigned int secs) {
+	printw("%s", string);
+	refresh();
+	sleep(secs);
+}
+void wwprint(const char *string, unsigned int ms) {
+	int size = strlen(string);
+	for (int i = 0; i < size; i++) {
+		addch(string[i]);
+		refresh();
+		usleep(ms * 1e3);
+	}
+}
 int main() {
     int i, j, y, z, keypress, count = 0, firstcoldone = 0, update = 4, highnum = 0, mcolor = COLOR_GREEN, randnum = 0, randmin = 0, *length = malloc(COLS * sizeof(int)), *spaces = malloc(COLS * sizeof(int)), *updates = malloc(COLS * sizeof(int));
-    char *msg = "";
+    char *msg = "", *Username = getpwuid(getuid()) -> pw_name;
     setlocale(LC_ALL, "");
     initscr();
-    noecho();
     timeout(0);
     curs_set(0);
+	wwprint("Wake up, ", 100);
+	wprint(Username, 0);
+	wwprint("...", 100);
+	clear();
+	wwprint("The Matrix has you...", 100);
+	clear();
+	wwprint("Follow the white rabbit.", 100);
+	clear();
+	wprint("Knock, knock, ", 0);
+	wprint(Username, 0);
+	wprint(".", 1);
+	clear();
+	noecho();
     signal(SIGINT, sighandler);
     signal(SIGQUIT, sighandler);
-    signal(SIGWINCH, sighandler);
     signal(SIGTSTP, sighandler);
     if (has_colors()) {
         start_color();
