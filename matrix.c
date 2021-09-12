@@ -3,34 +3,58 @@
 #include <string.h>
 #include <signal.h>
 #include <locale.h>
-#include <unistd.h>
 #include <curses.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <lmcons.h>
+#define ON 1
+#define SLEEP(x) Sleep(x * 1e3)
+#define USLEEP(x) Sleep(x)
+#define SETUP {\
+    initscr();\
+    raw();\
+    Username = getenv("USERNAME");\
+}
+#else
+#include <unistd.h>
 #include <pwd.h>
+#define ON signal_status != SIGTSTP && signal_status != SIGINT && signal_status != SIGQUIT
+#define SLEEP(x) sleep(x)
+#define USLEEP(x) usleep(x * 1e3)
+#define SETUP {\
+    initscr();\
+    signal(SIGINT, sighandler);\
+    signal(SIGQUIT, sighandler);\
+    signal(SIGTSTP, sighandler);\
+    Username = getpwuid(getuid()) -> pw_name;\
+}
+volatile sig_atomic_t signal_status = 0;
+void sighandler(int s) {signal_status = s;}
+#endif
 typedef struct cmatrix {
     int val;
     bool is_head;
 } cmatrix;
 cmatrix **matrix = (cmatrix **) NULL;
-volatile sig_atomic_t signal_status = 0;
-void sighandler(int s) {signal_status = s;}
+char *Username = NULL;
 void wprint(const char *string, unsigned int secs) {
 	printw("%s", string);
 	refresh();
-	sleep(secs);
+	SLEEP(secs);
 }
 void wwprint(const char *string, unsigned int ms) {
 	int size = strlen(string);
 	for (int i = 0; i < size; i++) {
 		addch(string[i]);
 		refresh();
-		usleep(ms * 1e3);
+		USLEEP(ms);
 	}
 }
 int main() {
     int i, j, y, z, keypress, count = 0, firstcoldone = 0, update = 4, highnum = 0, mcolor = COLOR_GREEN, randnum = 0, randmin = 0, *length = malloc(COLS * sizeof(int)), *spaces = malloc(COLS * sizeof(int)), *updates = malloc(COLS * sizeof(int));
-    char *msg = "", *Username = getpwuid(getuid()) -> pw_name;
+    char *msg = "";
     setlocale(LC_ALL, "");
-    initscr();
+    SETUP
     timeout(0);
     curs_set(0);
 	wwprint("Wake up, ", 100);
@@ -46,9 +70,6 @@ int main() {
 	wprint(".", 1);
 	clear();
 	noecho();
-    signal(SIGINT, sighandler);
-    signal(SIGQUIT, sighandler);
-    signal(SIGTSTP, sighandler);
     if (has_colors()) {
         start_color();
         init_pair(COLOR_BLACK, COLOR_BLACK, COLOR_BLACK);
@@ -76,12 +97,15 @@ int main() {
         matrix[1][j].val = ' ';
         updates[j] = (int) rand() % 3 + 1;
     }
-    while (signal_status != SIGTSTP && signal_status != SIGINT && signal_status != SIGQUIT) {
+    while (ON) {
         count++;
         if (count > 4)
             count = 1;
         if ((keypress = wgetch(stdscr)) != ERR) {
             switch (keypress) {
+            case 3:
+                endwin();
+                return 0;
             case '0':
             case '1':
             case '2':
